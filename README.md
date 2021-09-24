@@ -12,9 +12,6 @@
     <a href="https://github.com/rusty-celery/rusty-celery/actions">
         <img alt="Build" src="https://github.com/rusty-celery/rusty-celery/workflows/CI/badge.svg?event=push&branch=main">
     </a>
-    <a href='https://coveralls.io/github/rusty-celery/rusty-celery?branch=main'>
-        <img src='https://coveralls.io/repos/github/rusty-celery/rusty-celery/badge.svg?branch=main' alt='Coverage Status' />
-    </a>
     <a href="https://github.com/rusty-celery/rusty-celery/blob/main/LICENSE">
         <img alt="License" src="https://img.shields.io/github/license/rusty-celery/rusty-celery.svg?color=blue&cachedrop">
     </a>
@@ -169,7 +166,3 @@ And then you can consume tasks from Rust or Python as explained above.
 | ----------- |:------:| -------- |
 | RPC         | 🔴     | [![](https://img.shields.io/github/issues/rusty-celery/rusty-celery/Backend%3A%20RPC?label=Issues)](https://github.com/rusty-celery/rusty-celery/labels/Backend%3A%20RPC) |
 | Redis       | 🔴     | [![](https://img.shields.io/github/issues/rusty-celery/rusty-celery/Backend%3A%20Redis?label=Issues)](https://github.com/rusty-celery/rusty-celery/labels/Backend%3A%20Redis) |
-
-## Team
-
-[![](https://sourcerer.io/fame/epwalsh/rusty-celery/rusty-celery/images/0)](https://sourcerer.io/fame/epwalsh/rusty-celery/rusty-celery/links/0)[![](https://sourcerer.io/fame/epwalsh/rusty-celery/rusty-celery/images/1)](https://sourcerer.io/fame/epwalsh/rusty-celery/rusty-celery/links/1)[![](https://sourcerer.io/fame/epwalsh/rusty-celery/rusty-celery/images/2)](https://sourcerer.io/fame/epwalsh/rusty-celery/rusty-celery/links/2)[![](https://sourcerer.io/fame/epwalsh/rusty-celery/rusty-celery/images/3)](https://sourcerer.io/fame/epwalsh/rusty-celery/rusty-celery/links/3)[![](https://sourcerer.io/fame/epwalsh/rusty-celery/rusty-celery/images/4)](https://sourcerer.io/fame/epwalsh/rusty-celery/rusty-celery/links/4)[![](https://sourcerer.io/fame/epwalsh/rusty-celery/rusty-celery/images/5)](https://sourcerer.io/fame/epwalsh/rusty-celery/rusty-celery/links/5)[![](https://sourcerer.io/fame/epwalsh/rusty-celery/rusty-celery/images/6)](https://sourcerer.io/fame/epwalsh/rusty-celery/rusty-celery/links/6)[![](https://sourcerer.io/fame/epwalsh/rusty-celery/rusty-celery/images/7)](https://sourcerer.io/fame/epwalsh/rusty-celery/rusty-celery/links/7)

@@ -439,6 +439,7 @@ where
         // handles all errors at it's own level or the task level. In this function
         // we only log errors at the broker and delivery level.
         if let Err(TraceError::Retry(retry_eta)) = tracer.trace().await {
+            // If retry error -> retry the task.
             self.broker
                 .retry(&delivery, retry_eta)
                 .await

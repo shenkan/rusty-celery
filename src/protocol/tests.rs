@@ -64,13 +64,13 @@ fn test_deserialize_body_with_args() {
             task: "TestTask".into(),
             ..Default::default()
         },
-        raw_body: Vec::from(&JSON[..]),
+        raw_body: Vec::from(JSON),
     };
     let body = message.body::<TestTask>().unwrap();
     assert_eq!(body.1.a, 4);
 }
 
-const YAML: &str = "---\n- []\n- a: 4\n- callbacks: ~\n  errbacks: ~\n  chain: ~\n  chord: ~";
+const YAML: &str = "---\n- []\n- a: 4\n- callbacks: ~\n  errbacks: ~\n  chain: ~\n  chord: ~\n";
 
 #[test]
 fn test_yaml_serialize_body() {
@@ -93,7 +93,7 @@ fn test_yaml_deserialize_body_with_args() {
             task: "TestTask".into(),
             ..Default::default()
         },
-        raw_body: Vec::from(&YAML[..]),
+        raw_body: Vec::from(YAML),
     };
     let body = message.body::<TestTask>().unwrap();
     assert_eq!(body.1.a, 4);
@@ -190,7 +190,7 @@ fn test_serialization() {
             kwargsrepr: Some("{'y': 2}".into()),
             origin: Some("gen123@piper".into()),
         },
-        raw_body: Vec::from(&JSON[..]),
+        raw_body: Vec::from(JSON),
     };
     let ser_msg_result = message.json_serialized();
     assert!(ser_msg_result.is_ok());

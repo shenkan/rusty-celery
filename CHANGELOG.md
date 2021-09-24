@@ -7,7 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+<<<<<<< HEAD
 - Create Results Backend.
+=======
+## [v0.4.0-rc10](https://github.com/rusty-celery/rusty-celery/releases/tag/v0.4.0-rc10) - 2021-08-30
+
+### Fixed
+
+- Fixed another bug with the `app!` and `beat!` related to issue [#250](https://github.com/rusty-celery/rusty-celery/issues/250).
+
+## [v0.4.0-rc8](https://github.com/rusty-celery/rusty-celery/releases/tag/v0.4.0-rc8) - 2021-08-05
+>>>>>>> upstream/main
 
 ### Changed
 
@@ -34,10 +44,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Changed `Ok` variant type of the the return type of `Broker::consume`. This is now a tuple that includes a unique
   consumer tag that can then be passed to `Broker::cancel` to cancel the corresponding consumer.
 - Added a "coverage" job to GitHub Actions.
+- Completed MessageBuilder struct
 
 ### Fixed
 
 - Fixed a bug with `AMQPBroker::close()` that would result in an error with `lapin`.
+- Fixed a bug with the `celery::app!` macro that caused it to fail to compile when the broker connection string was passed as a variable instead of an expression.
 
 ## [v0.4.0-rc5](https://github.com/rusty-celery/rusty-celery/releases/tag/v0.4.0-rc5) - 2020-11-19
 

@@ -39,7 +39,7 @@ where
             info!("Task {}[{}] received", task.name(), task.request().id);
         }
 
-        Ok(Self { task, event_tx })
+        Self { task, event_tx }
     }
 }
 
@@ -248,5 +248,5 @@ pub(super) fn build_tracer<T: Task + Send + 'static>(
     // it.
     let task = T::from_request(request, options);
 
-    Ok(Box::new(Tracer::<T>::new(task, event_tx)?))
+    Ok(Box::new(Tracer::<T>::new(task, event_tx)))
 }
