@@ -21,7 +21,7 @@
 //! Here instead we have only one scheduler struct, and the different backends
 //! correspond to the different scheduler implementations in Python.
 
-use crate::broker::{build_and_connect, configure_task_routes, Broker, BrokerBuilder};
+use crate::broker::{build_and_connect_broker, configure_task_routes, Broker, BrokerBuilder};
 use crate::routing::{self, Rule};
 use crate::{
     error::{BeatError, BrokerError},
@@ -192,7 +192,7 @@ where
         let (broker_builder, task_routes) =
             configure_task_routes(broker_builder, &self.config.task_routes)?;
 
-        let broker = build_and_connect(
+        let broker = build_and_connect_broker(
             broker_builder,
             self.config.broker_connection_timeout,
             if self.config.broker_connection_retry {

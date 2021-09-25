@@ -17,8 +17,9 @@ use tokio_stream::StreamMap;
 
 mod trace;
 
-use crate::broker::{build_and_connect, configure_task_routes, Broker, BrokerBuilder};
-use crate::error::{BrokerError, CeleryError, TraceError};
+use crate::backend::{build_and_connect_backend, Backend, BackendBuilder};
+use crate::broker::{build_and_connect_broker, configure_task_routes, Broker, BrokerBuilder};
+use crate::error::{BackendError, BrokerError, CeleryError, TraceError};
 use crate::protocol::{Message, MessageContentType, TryDeserializeMessage};
 use crate::routing::Rule;
 use crate::task::{AsyncResult, Signature, Task, TaskEvent, TaskOptions, TaskStatus};
@@ -27,6 +28,7 @@ use trace::{build_tracer, TraceBuilder, TracerTrait};
 struct Config<Bb>
 where
     Bb: BrokerBuilder,
+    // BEb: BackendBuilder,
 {
     name: String,
     hostname: String,
@@ -38,12 +40,18 @@ where
     default_queue: String,
     task_options: TaskOptions,
     task_routes: Vec<(String, String)>,
+    // backend_builder: BEb,
+    // backend_connection_timeout: u32,
+    // backend_connection_retry: bool,
+    // backend_connection_max_retries: u32,
+    // backend_connection_retry_delay: u32,
 }
 
 /// Used to create a [`Celery`] app with a custom configuration.
 pub struct CeleryBuilder<Bb>
 where
     Bb: BrokerBuilder,
+    // BEb: BackendBuilder,
 {
     config: Config<Bb>,
 }
@@ -51,6 +59,7 @@ where
 impl<Bb> CeleryBuilder<Bb>
 where
     Bb: BrokerBuilder,
+    // BEb: BackendBuilder,
 {
     /// Get a [`CeleryBuilder`] for creating a [`Celery`] app with a custom configuration.
     pub fn new(name: &str, broker_url: &str) -> Self {
@@ -73,6 +82,11 @@ where
                 default_queue: "celery".into(),
                 task_options: TaskOptions::default(),
                 task_routes: vec![],
+                // backend_builder: BEb::new(backend_url),
+                // backend_connection_timeout: 2,
+                // backend_connection_retry: true,
+                // backend_connection_max_retries: 5,
+                // backend_connection_retry_delay: 5,
             },
         }
     }
@@ -198,15 +212,11 @@ where
     /// Construct a [`Celery`] app with the current configuration.
     pub async fn build(self) -> Result<Celery<Bb::Broker>, CeleryError> {
         // Declare default queue to broker.
-        let broker_builder = self
-            .config
-            .broker_builder
-            .declare_queue(&self.config.default_queue);
+        let broker_builder = self.config.broker_builder.declare_queue(&self.config.default_queue);
 
-        let (broker_builder, task_routes) =
-            configure_task_routes(broker_builder, &self.config.task_routes)?;
+        let (broker_builder, task_routes) = configure_task_routes(broker_builder, &self.config.task_routes)?;
 
-        let broker = build_and_connect(
+        let broker = build_and_connect_broker(
             broker_builder,
             self.config.broker_connection_timeout,
             if self.config.broker_connection_retry {
@@ -230,6 +240,11 @@ where
             broker_connection_retry: self.config.broker_connection_retry,
             broker_connection_max_retries: self.config.broker_connection_max_retries,
             broker_connection_retry_delay: self.config.broker_connection_retry_delay,
+            // backend,
+            // backend_connection_timeout,
+            // backend_connection_retry,
+            // backend_connection_max_retries,
+            // backend_connection_retry_delay,
         })
     }
 }
@@ -245,6 +260,8 @@ pub struct Celery<B: Broker> {
 
     /// The app's broker.
     pub broker: B,
+
+    // pub backend: BE,
 
     /// The default queue to send and receive from.
     pub default_queue: String,
@@ -268,9 +285,11 @@ pub struct Celery<B: Broker> {
 impl<B> Celery<B>
 where
     B: Broker + 'static,
+    // BE: Backend + 'static,
 {
     /// Get a [`CeleryBuilder`] for creating a [`Celery`] app with a custom configuration.
     pub fn builder(name: &str, broker_url: &str) -> CeleryBuilder<B::Builder> {
+        // CeleryBuilder::<B::Builder, BE::Builder>::new(name, broker_url, backend_url)
         CeleryBuilder::<B::Builder>::new(name, broker_url)
     }
 
@@ -313,22 +332,14 @@ where
 
     /// Send a task to a remote worker. Returns an [`AsyncResult`] with the task ID of the task
     /// if it was successfully sent.
-    pub async fn send_task<T: Task>(
-        &self,
-        mut task_sig: Signature<T>,
-    ) -> Result<AsyncResult, CeleryError> {
+    pub async fn send_task<T: Task>(&self, mut task_sig: Signature<T>) -> Result<AsyncResult, CeleryError> {
         task_sig.options.update(&self.task_options);
         let maybe_queue = task_sig.queue.take();
-        let queue = maybe_queue.as_deref().unwrap_or_else(|| {
-            crate::routing::route(T::NAME, &self.task_routes).unwrap_or(&self.default_queue)
-        });
+        let queue = maybe_queue
+            .as_deref()
+            .unwrap_or_else(|| crate::routing::route(T::NAME, &self.task_routes).unwrap_or(&self.default_queue));
         let message = Message::try_from(task_sig)?;
-        info!(
-            "Sending task {}[{}] to {}",
-            T::NAME,
-            message.task_id(),
-            queue,
-        );
+        info!("Sending task {}[{}] to {}", T::NAME, message.task_id(), queue,);
         self.broker.send(&message, queue).await?;
         Ok(AsyncResult::new(message.task_id()))
     }
@@ -357,10 +368,8 @@ where
                     .map_err(|e| Box::new(e) as Box<dyn Error + Send + Sync + 'static>)?,
             )
         } else {
-            Err(
-                Box::new(CeleryError::UnregisteredTaskError(message.headers.task))
-                    as Box<dyn Error + Send + Sync + 'static>,
-            )
+            Err(Box::new(CeleryError::UnregisteredTaskError(message.headers.task))
+                as Box<dyn Error + Send + Sync + 'static>)
         }
     }
 
@@ -467,11 +476,7 @@ where
     }
 
     /// Wraps `try_handle_delivery` to catch any and all errors that might occur.
-    async fn handle_delivery(
-        self: Arc<Self>,
-        delivery: B::Delivery,
-        event_tx: UnboundedSender<TaskEvent>,
-    ) {
+    async fn handle_delivery(self: Arc<Self>, delivery: B::Delivery, event_tx: UnboundedSender<TaskEvent>) {
         if let Err(e) = self.try_handle_delivery(delivery, event_tx).await {
             error!("{}", e);
         }
@@ -514,10 +519,7 @@ where
             let mut reconnect_successful: bool = false;
             for _ in 0..self.broker_connection_max_retries {
                 info!("Trying to re-establish connection with broker");
-                time::sleep(Duration::from_secs(
-                    self.broker_connection_retry_delay as u64,
-                ))
-                .await;
+                time::sleep(Duration::from_secs(self.broker_connection_retry_delay as u64)).await;
 
                 match self.broker.reconnect(self.broker_connection_timeout).await {
                     Err(err) => {

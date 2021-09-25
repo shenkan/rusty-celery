@@ -131,7 +131,7 @@ pub(crate) fn configure_task_routes<Bb: BrokerBuilder>(
 
 /// A utility function that can be used to build a broker
 /// and initialize the connection.
-pub(crate) async fn build_and_connect<Bb: BrokerBuilder>(
+pub(crate) async fn build_and_connect_broker<Bb: BrokerBuilder>(
     broker_builder: Bb,
     connection_timeout: u32,
     connection_max_retries: u32,

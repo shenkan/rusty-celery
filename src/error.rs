@@ -182,11 +182,11 @@ impl BrokerError {
 /// Errors that can occur at the result backend level.
 #[derive(Error, Debug)]
 pub enum BackendError {
-    /// Raised when a broker URL can't be parsed.
+    /// Raised when a backend URL can't be parsed.
     #[error("invalid backend URL '{0}'")]
     InvalidBackendUrl(String),
 
-    /// Broker is disconnected.
+    /// Backend is disconnected.
     #[error("backend not connected")]
     NotConnected,
 
@@ -201,6 +201,18 @@ pub enum BackendError {
     /// Any other Redis error that could happen.
     #[error("Redis error \"{0}\"")]
     RedisError(#[from] redis::RedisError),
+}
+
+impl BackendError {
+    pub fn is_connection_error(&self) -> bool {
+        match self {
+            BackendError::IoError(_) | BackendError::NotConnected => true,
+            BackendError::RedisError(err) => {
+                err.is_connection_dropped() || err.is_connection_refusal()
+            }
+            _ => false,
+        }
+    }
 }
 
 /// An invalid glob pattern for a routing rule.

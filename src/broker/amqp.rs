@@ -32,6 +32,7 @@ pub struct AMQPBrokerBuilder {
     config: Config,
 }
 
+
 #[async_trait]
 impl BrokerBuilder for AMQPBrokerBuilder {
     type Broker = AMQPBroker;
