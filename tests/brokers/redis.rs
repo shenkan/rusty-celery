@@ -1,6 +1,7 @@
 #![allow(non_upper_case_globals)]
 use anyhow::Result;
 use async_trait::async_trait;
+use celery::backend::DisabledBackend;
 use celery::broker::Broker;
 use celery::broker::RedisBroker;
 use celery::error::TaskError;
@@ -69,6 +70,7 @@ async fn test_redis_broker() -> Result<()> {
     println!("Starting broker");
     let my_app = celery::app!(
         broker = RedisBroker { std::env::var("REDIS_ADDR").unwrap_or_else(|_| "redis://127.0.0.1:6379/".into()) },
+        backend = DisabledBackend { "" },
         tasks = [add],
         task_routes = [
             "add" => "celery",

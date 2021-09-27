@@ -1,6 +1,7 @@
 #![allow(non_upper_case_globals)]
 
 use async_trait::async_trait;
+use celery::backend::DisabledBackend;
 use celery::broker::{AMQPBroker, Broker};
 use celery::error::TaskError;
 use celery::task::{Request, Signature, Task, TaskOptions};
@@ -67,6 +68,7 @@ impl Task for add {
 async fn test_amqp_broker() {
     let my_app = celery::app!(
         broker = AMQPBroker { std::env::var("AMQP_ADDR").unwrap_or_else(|_| "amqp://127.0.0.1:5672//".into()) },
+        backend = DisabledBackend { "" },
         tasks = [add],
         task_routes = [
             "add" => "celery",
