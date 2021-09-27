@@ -1,17 +1,18 @@
 use crate::error::BackendError;
-use log::error;
 use crate::task::TaskStatus;
-use tokio::time::{self, Duration};
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
+use log::error;
 use serde::{Deserialize, Serialize};
 use serde_json::{from_slice, from_value, json, Value};
+use tokio::time::{self, Duration};
 
 mod redis;
 pub use self::redis::{RedisBackend, RedisBackendBuilder};
 
-#[cfg(test)]
-pub mod mock;
+// TODO
+// #[cfg(test)]
+// pub mod mock;
 
 /// A results [`Backend`] is used to store and retrive the results and status of the tasks.
 #[async_trait]
@@ -20,31 +21,31 @@ pub trait Backend: Send + Sync + Sized {
     type Builder: BackendBuilder<Backend = Self>;
 
     /// Update task state and result.
-    async fn store_result(
-        &self,
-        task_id: &str,
-        result: String,
-        state: TaskStatus,
-    ) -> Result<(), BackendError>;
-    
+    async fn store_result(&self, task_id: &str, result: Option<String>, state: TaskStatus) -> Result<(), BackendError>;
+
     /// Get task meta from backend.
     async fn get_task_meta(&self, task_id: &str, cache: bool) -> Result<TaskResultMetadata, BackendError>;
 
-    async fn get_result_meta(&self, task_id: &str, result: String, state: TaskStatus) -> TaskResultMetadata;
-    
+    async fn get_result_meta(&self, task_id: &str, result: Option<String>, state: TaskStatus) -> TaskResultMetadata;
+
     async fn encode(&self, meta: TaskResultMetadata) -> Result<Vec<u8>, BackendError>;
 
     /// Get current state of a given task.
     async fn get_state(&self, task_id: &str) -> Result<TaskStatus, BackendError> {
         Ok(self.get_task_meta(task_id, true).await?.status)
     }
-    
+
     /// Get result of a given task.
     async fn get_result(&self, task_id: &str) -> Result<Option<String>, BackendError> {
         Ok(self.get_task_meta(task_id, true).await?.result)
     }
 
-    async fn mark_as_started(&self, task_id: &str, );
+    async fn mark_as_started(&self, task_id: &str, meta: TaskResultMetadata) -> Result<(), BackendError>;
+
+    async fn mark_as_done(&self, task_id: &str, meta: TaskResultMetadata) -> Result<(), BackendError>;
+
+    // TODO
+    // async fn mark_as_failure(&self, task_id: &str, meta: TaskResultMetadata);
 
     fn safe_url(&self) -> String;
 
@@ -53,7 +54,9 @@ pub trait Backend: Send + Sync + Sized {
     async fn sleep(&self, seconds: u64) {
         tokio::time::sleep(Duration::from_secs(seconds));
     }
-    
+
+    async fn is_cached(&self, task_id: &str) -> bool;
+
     fn builder(backend_url: &str) -> Result<Self::Builder, BackendError> {
         Ok(Self::Builder::new(backend_url))
     }
@@ -68,7 +71,7 @@ pub trait KeyValueStoreBackend: Backend {
     async fn mget(&self, keys: &[&str]) -> Result<Vec<String>, BackendError>;
 
     async fn set(&self, key: &str, value: TaskResultMetadata) -> Result<(), BackendError>;
-    
+
     async fn delete(&self, key: &str) -> Result<(), BackendError>;
 
     async fn incr(&self, key: &str) -> Result<(), BackendError>;
@@ -134,7 +137,6 @@ pub trait BackendBuilder {
     /// Construct the `Backend` with the given configuration.
     async fn build(&self, connection_timeout: u32) -> Result<Self::Backend, BackendError>;
 }
-
 
 pub(crate) async fn build_and_connect_backend<Bb: BackendBuilder>(
     backend_builder: Bb,

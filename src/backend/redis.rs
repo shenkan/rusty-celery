@@ -178,13 +178,14 @@ impl KeyValueStoreBackend for RedisBackend {
 impl Backend for RedisBackend {
     type Builder = RedisBackendBuilder;
 
-    async fn store_result(&self, task_id: &str, result: String, state: TaskStatus) -> Result<(), BackendError> {
+    async fn store_result(&self, task_id: &str, result: Option<String>, state: TaskStatus) -> Result<(), BackendError> {
         // TODO: implement retries as follows:
         // on error, we check if always_retry_backend_operation is `true` and that the
         // error `is_safe_to_retry()`.  If so, we continue to call `set_with_state(key, value, state)`
         // while retries < max_retries
         let meta = self.get_result_meta(task_id, result, state).await;
-        self.set(self.get_key_for_task(task_id, "").await?.as_str(), meta).await?;
+        self.set(self.get_key_for_task(task_id, "").await?.as_str(), meta)
+            .await?;
         Ok(())
     }
 
@@ -192,12 +193,16 @@ impl Backend for RedisBackend {
         Ok(meta.json_serialized()?)
     }
 
-    async fn mark_as_started(&self, task_id: &str) {
-        
+    async fn mark_as_started(&self, task_id: &str, meta: TaskResultMetadata) -> Result<(), BackendError> {
+        Ok(self.store_result(task_id, None, TaskStatus::Pending).await?)
     }
 
-    async fn get_result_meta(&self, task_id: &str, result: String, state: TaskStatus) -> TaskResultMetadata {
-        TaskResultMetadata::new(task_id, Some(result), state)
+    async fn mark_as_done(&self, task_id: &str, meta: TaskResultMetadata) -> Result<(), BackendError> {
+        Ok(self.store_result(task_id, meta.result, TaskStatus::Finished).await?)
+    }
+
+    async fn get_result_meta(&self, task_id: &str, result: Option<String>, state: TaskStatus) -> TaskResultMetadata {
+        TaskResultMetadata::new(task_id, result, state)
     }
 
     async fn get_task_meta(&self, task_id: &str, cache: bool) -> Result<TaskResultMetadata, BackendError> {
@@ -260,8 +265,21 @@ impl Backend for RedisBackend {
         Ok(self.delete(self.get_key_for_task(task_id, "").await?.as_str()).await?)
     }
 
+    async fn is_cached(&self, task_id: &str) -> bool {
+        self.cache
+            .clone()
+            .lock()
+            .await
+            .contains_key(self.get_key_for_task(task_id, "").await.unwrap().as_str())
+    }
+
     // Default implementation
     fn builder(backend_url: &str) -> Result<Self::Builder, BackendError> {
         Ok(Self::Builder::new(backend_url))
     }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
 }
