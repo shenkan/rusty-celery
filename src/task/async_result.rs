@@ -1,4 +1,20 @@
-use crate::backend::{Backend, TaskResultMetadata};
+use crate::backend::{Backend, BackendBuilder, TaskResultMetadata};
+/// An [`AsyncResult`] is a handle for the result of a task.
+#[derive(Debug, Clone)]
+pub struct BackendAsyncResult<BE: Backend> {
+    pub task_id: String,
+    pub backend: Option<BE>,
+}
+
+impl<BE: Backend> BackendAsyncResult<BE> {
+    pub fn new(task_id: &str, backend: Option<BE>) -> Self {
+        Self {
+            task_id: task_id.into(),
+            backend:  backend
+        }
+    }
+}
+
 /// An [`AsyncResult`] is a handle for the result of a task.
 #[derive(Debug, Clone)]
 pub struct AsyncResult {
