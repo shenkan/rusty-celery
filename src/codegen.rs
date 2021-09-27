@@ -5,13 +5,14 @@ pub use celery_codegen::task;
 macro_rules! __app_internal {
     (
         $broker_type:ty { $broker_url:expr },
+        $backend_type:ty { $backend_urlr:expr },
         [ $( $t:ty ),* ],
         [ $( $pattern:expr => $queue:expr ),* ],
         $( $x:ident = $y:expr, )*
     ) => {{
-        async fn _build_app(mut builder: $crate::CeleryBuilder::<<$broker_type as $crate::broker::Broker>::Builder>) ->
+        async fn _build_app(mut builder: $crate::CeleryBuilder::<<$broker_type as $crate::broker::Broker>::Builder, <$backend_type as $crate::backend::Backend>::Builder>) ->
             $crate::export::Result<$crate::export::Arc<$crate::Celery::<$broker_type>>> {
-            let celery: $crate::Celery<$broker_type> = builder.build().await?;
+            let celery: $crate::Celery<$broker_type, $backend_type> = builder.build().await?;
 
             $(
                 celery.register_task::<$t>().await?;
@@ -22,7 +23,9 @@ macro_rules! __app_internal {
 
         let broker_url = $broker_url;
 
-        let mut builder = $crate::Celery::<$broker_type>::builder("celery", &broker_url);
+        let backend_url = $backend_url;
+
+        let mut builder = $crate::Celery::<$broker_type, $backend_type>::builder("celery", &broker_url, $backend_url);
 
         $(
             builder = builder.$x($y);
@@ -152,12 +155,14 @@ macro_rules! __beat_internal {
 macro_rules! app {
     (
         broker = $broker_type:ty { $broker_url:expr },
+        backend = $backend_Type:ty { $backend_url:expr },
         tasks = [ $( $t:ty ),* $(,)? ],
         task_routes = [ $( $pattern:expr => $queue:expr ),* $(,)? ]
         $(, $x:ident = $y:expr )* $(,)?
     ) => {
         $crate::__app_internal!(
             $broker_type { $broker_url },
+            $backend_type { $backend_url },
             [ $( $t ),* ],
             [ $( $pattern => $queue ),* ],
             $( $x = $y, )*
