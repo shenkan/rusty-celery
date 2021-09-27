@@ -57,13 +57,11 @@ impl MockBackend {
 impl Backend for MockBackend {
     type Builder = MockBackendBuilder;
 
-    /// Update task state and result.
-    async fn store_result(&self, task_id: &str, result: String, state: TaskStatus) -> Result<(), ()> {
+    async fn store_result(&self, task_id: &str, result: Option<String>, state: TaskStatus) -> Result<(), BackendError> {
         Ok(())
     }
 
     async fn forget(&self, task_id: &str) -> Result<(), BackendError> {
-        // Ok(self.delete(self.get_key_for_task(task_id, "").await?.as_str()).await?)
         Err(BackendError::NotConnected)
     }
 
@@ -71,9 +69,28 @@ impl Backend for MockBackend {
         "mock://fake-url:8000/".into()
     }
 
-    /// Get task meta from backend.
-    async fn get_task_meta(&self, task_id: &str) -> Result<TaskResultMetadata, BackendError> {
-        // Ok(ResultMetadata::new(task_id, ))
+    async fn get_task_meta(&self, task_id: &str, cache: bool) -> Result<TaskResultMetadata, BackendError> {
         Err(BackendError::NotConnected)
     }
+
+    async fn get_result_meta(&self, task_id: &str, result: Option<String>, state: TaskStatus) -> TaskResultMetadata {
+        TaskResultMetadata::new(task_id, result, state)
+    }
+
+    async fn encode(&self, meta: TaskResultMetadata) -> Result<Vec<u8>, BackendError> {
+        todo!()
+    }
+
+    async fn mark_as_started(&self, task_id: &str, meta: TaskResultMetadata) -> Result<(), BackendError> {
+        todo!()
+    }
+
+    async fn mark_as_done(&self, task_id: &str, meta: TaskResultMetadata) -> Result<(), BackendError> {
+        todo!()
+    }
+
+    async fn is_cached(&self, task_id: &str) -> bool {
+        todo!()
+    }
+
 }

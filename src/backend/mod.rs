@@ -9,10 +9,8 @@ use tokio::time::{self, Duration};
 
 mod redis;
 pub use self::redis::{RedisBackend, RedisBackendBuilder};
-
-// TODO
-// #[cfg(test)]
-// pub mod mock;
+#[cfg(test)]
+pub mod mock;
 
 /// A results [`Backend`] is used to store and retrive the results and status of the tasks.
 #[async_trait]
@@ -193,16 +191,36 @@ pub(crate) async fn build_and_connect_backend<Bb: BackendBuilder>(
     })?)
 }
 
-struct DisabledBackend;
+pub struct DisabledBackendBuilder;
+
+#[async_trait]
+impl BackendBuilder for DisabledBackendBuilder {
+    type Backend = DisabledBackend;
+
+    #[allow(unused)]
+    fn new(backend_url: &str) -> Self {
+        Self {}
+    }
+
+    #[allow(unused)]
+    async fn build(&self, connection_timeout: u32) -> Result<Self::Backend, BackendError> {
+        Ok(DisabledBackend::new())
+    }
+}
+
+#[derive(Default)]
+pub struct DisabledBackend;
 
 impl DisabledBackend {
     pub fn new() -> Self {
-        DisabledBackend
+        Self::default()
     }
 }
 
 #[async_trait]
 impl Backend for DisabledBackend {
+    type Builder = DisabledBackendBuilder;
+
     async fn store_result(&self, task_id: &str, result: Option<String>, state: TaskStatus) -> Result<(), BackendError> {
         Err(BackendError::NotConnected)
     }

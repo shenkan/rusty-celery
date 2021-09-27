@@ -6,6 +6,7 @@ use celery::prelude::*;
 async fn test_basic_use() {
     let _app = celery::app!(
         broker = AMQPBroker { std::env::var("AMQP_ADDR").unwrap() },
+        backend = DisabledBackend { "" },
         tasks = [],
         task_routes = []
     )
@@ -19,6 +20,7 @@ async fn test_basic_use_with_variable() {
     let default_queue = "default";
     let _app = celery::app!(
         broker = AMQPBroker { connection_string },
+        backend = DisabledBackend { "" },
         tasks = [],
         task_routes = [],
         default_queue = default_queue,
