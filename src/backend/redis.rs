@@ -57,10 +57,6 @@ impl BackendBuilder for RedisBackendBuilder {
     }
 
     async fn build(&self, connection_timeout: u32) -> Result<Self::Backend, BackendError> {
-        // let mut queues: HashSet<String> = HashSet::new();
-        // for queue_name in &self.config.queues {
-        //     queues.insert(queue_name.into());
-        // }
         println!("Creating client");
         let client = Client::open(&self.config.backend_url[..])
             .map_err(|_| BackendError::InvalidBackendUrl(self.config.backend_url.clone()))?;

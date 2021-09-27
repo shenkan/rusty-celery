@@ -62,6 +62,8 @@ pub trait Backend: Send + Sync + Sized {
     }
 }
 
+
+// Trait for a key/value store result [`Backend`].
 #[async_trait]
 pub trait KeyValueStoreBackend: Backend {
     const TASK_KEYPREFIX: &'static str;
@@ -83,7 +85,7 @@ pub trait KeyValueStoreBackend: Backend {
     async fn get_task_meta_for(&self, task_id: &str) -> Result<TaskResultMetadata, BackendError>;
 }
 
-/// Metadata of the task stored in the storage used.
+/// Metadata of a task stored in a [`Backend`].
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TaskResultMetadata {
     /// id of the task
@@ -112,6 +114,7 @@ impl TaskResultMetadata {
         }
     }
 
+    // Serializes the [`TaskResultMetadata`] for storage in a [`Backend`]
     pub fn json_serialized(&self) -> Result<Vec<u8>, BackendError> {
         let result = match &self.result {
             Some(result) => json!(result.clone()),
