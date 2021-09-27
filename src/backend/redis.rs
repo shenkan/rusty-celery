@@ -154,7 +154,6 @@ impl KeyValueStoreBackend for RedisBackend {
 
     // Get the cache key for a `Task` by `task_id`
     async fn get_key_for_task(&self, task_id: &str, key: &str) -> Result<String, BackendError> {
-        // figure out prefixes, key_t, and ensure_bytes
         Ok(vec![Self::TASK_KEYPREFIX, task_id, key].join(""))
     }
 

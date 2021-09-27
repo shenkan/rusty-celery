@@ -1,3 +1,4 @@
+use crate::backend::{Backend, TaskResultMetadata};
 /// An [`AsyncResult`] is a handle for the result of a task.
 #[derive(Debug, Clone)]
 pub struct AsyncResult {

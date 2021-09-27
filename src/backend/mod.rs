@@ -85,6 +85,23 @@ pub trait KeyValueStoreBackend: Backend {
     async fn get_task_meta_for(&self, task_id: &str) -> Result<TaskResultMetadata, BackendError>;
 }
 
+#[async_trait]
+pub trait AsyncBackend: Backend  {
+    async fn collect_into(&self, result: Option<String>, bucket: String);
+    
+    async fn iter_native(&self, result: Option<String>, no_ack: bool);
+    // def iter_native(self, result, no_ack=True, **kwargs):
+    // def add_pending_result(self, result, weak=False, start_drainer=True):
+    // def _maybe_resolve_from_buffer(self, result):
+    // def _add_pending_result(self, task_id, result, weak=False):
+    // def add_pending_results(self, results, weak=False):
+    // def remove_pending_result(self, result):
+    // def _remove_pending_result(self, task_id):
+    // def on_result_fulfilled(self, result):
+    // def wait_for_pending(self, result,
+    // def _wait_for_pending(self, result,
+}
+
 /// Metadata of a task stored in a [`Backend`].
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TaskResultMetadata {
@@ -174,4 +191,52 @@ pub(crate) async fn build_and_connect_backend<Bb: BackendBuilder>(
         error!("Failed to establish connection with broker");
         BackendError::NotConnected
     })?)
+}
+
+struct DisabledBackend;
+
+impl DisabledBackend {
+    pub fn new() -> Self {
+        DisabledBackend
+    }
+}
+
+#[async_trait]
+impl Backend for DisabledBackend {
+    async fn store_result(&self, task_id: &str, result: Option<String>, state: TaskStatus) -> Result<(), BackendError> {
+        Err(BackendError::NotConnected)
+    }
+
+    
+    async fn mark_as_started(&self, task_id: &str, meta: TaskResultMetadata) -> Result<(), BackendError> {
+        Err(BackendError::NotConnected)
+    }
+    
+    async fn mark_as_done(&self, task_id: &str, meta: TaskResultMetadata) -> Result<(), BackendError> {
+        Err(BackendError::NotConnected)
+    }
+
+    async fn encode(&self, meta: TaskResultMetadata) -> Result<Vec<u8>, BackendError> {
+        Err(BackendError::NotConnected)
+    }
+
+    async fn forget(&self, task_id: &str) -> Result<(), BackendError> {
+        Err(BackendError::NotConnected)
+    }
+
+    async fn is_cached(&self, task_id: &str) -> bool {
+        false
+    }
+    
+    fn safe_url(&self) -> String {
+        "".into()
+    }
+
+    async fn get_task_meta(&self, task_id: &str, cache: bool) -> Result<TaskResultMetadata, BackendError> {
+        Err(BackendError::NotConnected)
+    }
+
+    async fn get_result_meta(&self, task_id: &str, result: Option<String>, state: TaskStatus) -> TaskResultMetadata {
+        TaskResultMetadata::new(task_id, result, state)
+    }
 }
