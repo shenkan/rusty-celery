@@ -19,6 +19,10 @@ pub enum CeleryError {
     #[error("broker error")]
     BrokerError(#[from] BrokerError),
 
+    /// Any other backend-level error that could occur.
+    #[error("backend error")]
+    BackendError(#[from] BackendError),
+
     /// Any other IO error that could occur.
     #[error("IO error")]
     IoError(#[from] std::io::Error),
