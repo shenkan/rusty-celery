@@ -201,6 +201,12 @@ pub enum BackendError {
     /// Any other Redis error that could happen.
     #[error("Redis error \"{0}\"")]
     RedisError(#[from] redis::RedisError),
+
+    #[error("Failed to get task metadata for task id: {0}")]
+    GetMetadataError(String),
+
+    #[error("Failed to store metadata for task id: {0}, status: {1}")]
+    StoreMetadataError(String, crate::task::TaskStatus),
 }
 
 impl BackendError {
@@ -209,6 +215,15 @@ impl BackendError {
             BackendError::IoError(_) | BackendError::NotConnected => true,
             BackendError::RedisError(err) => {
                 err.is_connection_dropped() || err.is_connection_refusal()
+            }
+            _ => false,
+        }
+    }
+
+    pub fn is_safe_to_retry(&self) -> bool {
+        match self {
+            BackendError::RedisError(err) => {
+                false
             }
             _ => false,
         }

@@ -1,5 +1,5 @@
 #![allow(dead_code)]
-use super::{Backend, BackendBuilder, ResultMetadata};
+use super::{Backend, BackendBuilder, TaskResultMetadata};
 use crate::error::{BackendError, ProtocolError};
 use crate::protocol::Delivery;
 use crate::protocol::Message;
@@ -62,12 +62,17 @@ impl Backend for MockBackend {
         Ok(())
     }
 
+    async fn forget(&self, task_id: &str) -> Result<(), BackendError> {
+        // Ok(self.delete(self.get_key_for_task(task_id, "").await?.as_str()).await?)
+        Err(BackendError::NotConnected)
+    }
+
     fn safe_url(&self) -> String {
         "mock://fake-url:8000/".into()
     }
 
     /// Get task meta from backend.
-    async fn get_task_meta(&self, task_id: &str) -> Result<ResultMetadata, BackendError> {
+    async fn get_task_meta(&self, task_id: &str) -> Result<TaskResultMetadata, BackendError> {
         // Ok(ResultMetadata::new(task_id, ))
         Err(BackendError::NotConnected)
     }

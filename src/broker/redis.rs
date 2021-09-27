@@ -418,7 +418,3 @@ impl Broker for RedisBroker {
         }
     }
 }
-
-pub enum RetryPolicy {
-    max_retries
-}

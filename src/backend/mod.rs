@@ -5,6 +5,7 @@ use tokio::time::{self, Duration};
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
+use serde_json::{from_slice, from_value, json, Value};
 
 mod redis;
 pub use self::redis::{RedisBackend, RedisBackendBuilder};
@@ -24,31 +25,64 @@ pub trait Backend: Send + Sync + Sized {
         task_id: &str,
         result: String,
         state: TaskStatus,
-    ) -> Result<(), ()>;
+    ) -> Result<(), BackendError>;
     
     /// Get task meta from backend.
-    async fn get_task_meta(&self, task_id: &str) -> Result<ResultMetadata, BackendError>;
+    async fn get_task_meta(&self, task_id: &str, cache: bool) -> Result<TaskResultMetadata, BackendError>;
+
+    async fn get_result_meta(&self, task_id: &str, result: String, state: TaskStatus) -> TaskResultMetadata;
     
+    async fn encode(&self, meta: TaskResultMetadata) -> Result<Vec<u8>, BackendError>;
+
     /// Get current state of a given task.
     async fn get_state(&self, task_id: &str) -> Result<TaskStatus, BackendError> {
-        Ok(self.get_task_meta(task_id).await?.status)
+        Ok(self.get_task_meta(task_id, true).await?.status)
     }
     
     /// Get result of a given task.
     async fn get_result(&self, task_id: &str) -> Result<Option<String>, BackendError> {
-        Ok(self.get_task_meta(task_id).await?.result)
+        Ok(self.get_task_meta(task_id, true).await?.result)
     }
 
+    async fn mark_as_started(&self, task_id: &str, );
+
     fn safe_url(&self) -> String;
+
+    async fn forget(&self, task_id: &str) -> Result<(), BackendError>;
+
+    async fn sleep(&self, seconds: u64) {
+        tokio::time::sleep(Duration::from_secs(seconds));
+    }
     
     fn builder(backend_url: &str) -> Result<Self::Builder, BackendError> {
         Ok(Self::Builder::new(backend_url))
     }
 }
 
+#[async_trait]
+pub trait KeyValueStoreBackend: Backend {
+    const TASK_KEYPREFIX: &'static str;
+
+    async fn get(&self, key: &str) -> Result<String, BackendError>;
+
+    async fn mget(&self, keys: &[&str]) -> Result<Vec<String>, BackendError>;
+
+    async fn set(&self, key: &str, value: TaskResultMetadata) -> Result<(), BackendError>;
+    
+    async fn delete(&self, key: &str) -> Result<(), BackendError>;
+
+    async fn incr(&self, key: &str) -> Result<(), BackendError>;
+
+    async fn expire(&self, key: &str, seconds: usize) -> Result<(), BackendError>;
+
+    async fn get_key_for_task(&self, task_id: &str, key: &str) -> Result<String, BackendError>;
+
+    async fn get_task_meta_for(&self, task_id: &str) -> Result<TaskResultMetadata, BackendError>;
+}
+
 /// Metadata of the task stored in the storage used.
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ResultMetadata {
+pub struct TaskResultMetadata {
     /// id of the task
     task_id: String,
     /// Current status of the task.
@@ -59,8 +93,8 @@ pub struct ResultMetadata {
     date_done: Option<DateTime<Utc>>,
 }
 
-impl ResultMetadata {
-    pub fn new(task_id: &str, result: String, status: TaskStatus) -> Self {
+impl TaskResultMetadata {
+    pub fn new(task_id: &str, result: Option<String>, status: TaskStatus) -> Self {
         let date_done = if let TaskStatus::Finished = status {
             Some(Utc::now())
         } else {
@@ -69,10 +103,25 @@ impl ResultMetadata {
 
         Self {
             status,
-            result: Some(result),
+            result: result,
             task_id: task_id.to_string(),
             date_done,
         }
+    }
+
+    pub fn json_serialized(&self) -> Result<Vec<u8>, BackendError> {
+        let result = match &self.result {
+            Some(result) => json!(result.clone()),
+            None => Value::Null,
+        };
+        let json_value = json!({
+            "task_id": self.task_id.clone(),
+            "result": result,
+            "status": self.status.clone(),
+            "date_done": self.date_done.clone(),
+        });
+        let res = serde_json::to_string(&json_value)?;
+        Ok(res.into_bytes())
     }
 }
 

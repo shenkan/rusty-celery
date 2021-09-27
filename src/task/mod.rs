@@ -210,10 +210,19 @@ pub(crate) enum TaskEvent {
     StatusChange(TaskStatus),
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
 pub enum TaskStatus {
     Pending,
     Finished,
+}
+
+impl std::fmt::Display for TaskStatus {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match *self {
+            TaskStatus::Pending => write!(f, "{:?}", "Pending"),
+            TaskStatus::Finished => write!(f, "{:?}", "Finished"),
+        }
+    }
 }
 
 /// Extension methods for `Result` types within a task body.
