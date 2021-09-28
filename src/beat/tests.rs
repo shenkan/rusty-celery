@@ -72,8 +72,8 @@ async fn test_task_with_delta_schedule() {
     }
 
     // Check that the tasks executed (approximately) on time.
-    assert!((tasks[0].1).2.duration_since(start_time).unwrap() < Duration::from_millis(10));
-    assert!((tasks[1].1).2.duration_since(start_time).unwrap() < Duration::from_millis(30));
+    assert!(dbg!((tasks[0].1).2.duration_since(start_time).unwrap()) < Duration::from_millis(10));
+    assert!(dbg!((tasks[1].1).2.duration_since(start_time).unwrap()) < Duration::from_millis(30));
 }
 
 /// We test that two different tasks are executed the correct amount of times

@@ -97,33 +97,32 @@ pub struct RedisBackend {
 
 #[async_trait]
 impl AsyncBackend for RedisBackend {
-    type Backend = Self;
 
-    async fn collect_into(&self, result: BackendAsyncResult<Self::Backend>, bucket: String) {
+    async fn collect_into(&self, result: BackendAsyncResult<Self>, bucket: String) {
         todo!()
     }
 
-    async fn iter_native(&self, result: BackendAsyncResult<Self::Backend>, no_ack: bool) {
+    async fn iter_native(&self, result: BackendAsyncResult<Self>, no_ack: bool) {
         todo!()
     }
 
-    async fn add_pending_result(&self, result: BackendAsyncResult<Self::Backend>) {
+    async fn add_pending_result(&self, result: BackendAsyncResult<Self>) {
         todo!()
     }
 
-    async fn _maybe_resolve_from_buffer(&self, result: BackendAsyncResult<Self::Backend>) {
+    async fn _maybe_resolve_from_buffer(&self, result: BackendAsyncResult<Self>) {
         todo!()
     }
 
-    async fn remove_pending_result(&self, result: BackendAsyncResult<Self::Backend>) {
+    async fn remove_pending_result(&self, result: BackendAsyncResult<Self>) {
         todo!()
     }
 
-    async fn on_result_fulfilled(&self, result: BackendAsyncResult<Self::Backend>) {
+    async fn on_result_fulfilled(&self, result: BackendAsyncResult<Self>) {
         todo!()
     }
 
-    async fn wait_for_pending(&self, result: BackendAsyncResult<Self::Backend>) {
+    async fn wait_for_pending(&self, result: BackendAsyncResult<Self>) {
         todo!()
     }
 }

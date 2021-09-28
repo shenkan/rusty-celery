@@ -92,30 +92,30 @@ pub trait KeyValueStoreBackend: Backend {
 }
 
 #[async_trait]
-pub trait AsyncBackend: Backend where Self::Backend: Backend + Send + Sync + Sized {
-    type Backend;
-    async fn collect_into(&self, result: BackendAsyncResult<Self::Backend>, bucket: String);
+pub trait AsyncBackend: Backend where Self: Backend + Send + Sync + Sized {
+
+    async fn collect_into(&self, result: BackendAsyncResult<Self>, bucket: String);
     // def _collect_into(self, result, bucket):
     
-    async fn iter_native(&self, result: BackendAsyncResult<Self::Backend>, no_ack: bool);
+    async fn iter_native(&self, result: BackendAsyncResult<Self>, no_ack: bool);
     // def iter_native(self, result, no_ack=True, **kwargs):
 
-    async fn add_pending_result(&self, result: BackendAsyncResult<Self::Backend>);
+    async fn add_pending_result(&self, result: BackendAsyncResult<Self>);
     // def add_pending_result(self, result, weak=False, start_drainer=True):
     // def _add_pending_result(self, task_id, result, weak=False):
     // def add_pending_results(self, results, weak=False):
 
-    async fn _maybe_resolve_from_buffer(&self, result: BackendAsyncResult<Self::Backend>);
+    async fn _maybe_resolve_from_buffer(&self, result: BackendAsyncResult<Self>);
     // def _maybe_resolve_from_buffer(self, result):
 
-    async fn remove_pending_result(&self, result: BackendAsyncResult<Self::Backend>);
+    async fn remove_pending_result(&self, result: BackendAsyncResult<Self>);
     // def remove_pending_result(self, result):
     // def _remove_pending_result(self, task_id):
 
-    async fn on_result_fulfilled(&self, result: BackendAsyncResult<Self::Backend>);
+    async fn on_result_fulfilled(&self, result: BackendAsyncResult<Self>);
     // def on_result_fulfilled(self, result):
 
-    async fn wait_for_pending(&self, result: BackendAsyncResult<Self::Backend>);
+    async fn wait_for_pending(&self, result: BackendAsyncResult<Self>);
     // def wait_for_pending(self, result,
     // def _wait_for_pending(self, result,
 }
