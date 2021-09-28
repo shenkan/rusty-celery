@@ -1,14 +1,22 @@
 use crate::error::BackendError;
-use crate::task::TaskStatus;
+use crate::task::{AsyncResult, BackendAsyncResult, TaskStatus};
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
+use std::task::{Poll, Waker};
 use log::error;
+use std::sync::atomic::{AtomicU16, Ordering};
+use tokio::sync::mpsc::{channel, Receiver, Sender};
+use std::future::Future;
+use futures::Stream;
+use std::sync::Arc;
 use serde::{Deserialize, Serialize};
 use serde_json::{from_slice, from_value, json, Value};
 use tokio::time::{self, Duration};
 
 mod redis;
 pub use self::redis::{RedisBackend, RedisBackendBuilder};
+
+// TODO
 #[cfg(test)]
 pub mod mock;
 
@@ -84,20 +92,48 @@ pub trait KeyValueStoreBackend: Backend {
 }
 
 #[async_trait]
-pub trait AsyncBackend: Backend  {
-    async fn collect_into(&self, result: Option<String>, bucket: String);
+pub trait AsyncBackend: Backend where Self::Backend: Backend + Send + Sync + Sized {
+    type Backend;
+    async fn collect_into(&self, result: BackendAsyncResult<Self::Backend>, bucket: String);
+    // def _collect_into(self, result, bucket):
     
-    async fn iter_native(&self, result: Option<String>, no_ack: bool);
+    async fn iter_native(&self, result: BackendAsyncResult<Self::Backend>, no_ack: bool);
     // def iter_native(self, result, no_ack=True, **kwargs):
+
+    async fn add_pending_result(&self, result: BackendAsyncResult<Self::Backend>);
     // def add_pending_result(self, result, weak=False, start_drainer=True):
-    // def _maybe_resolve_from_buffer(self, result):
     // def _add_pending_result(self, task_id, result, weak=False):
     // def add_pending_results(self, results, weak=False):
+
+    async fn _maybe_resolve_from_buffer(&self, result: BackendAsyncResult<Self::Backend>);
+    // def _maybe_resolve_from_buffer(self, result):
+
+    async fn remove_pending_result(&self, result: BackendAsyncResult<Self::Backend>);
     // def remove_pending_result(self, result):
     // def _remove_pending_result(self, task_id):
+
+    async fn on_result_fulfilled(&self, result: BackendAsyncResult<Self::Backend>);
     // def on_result_fulfilled(self, result):
+
+    async fn wait_for_pending(&self, result: BackendAsyncResult<Self::Backend>);
     // def wait_for_pending(self, result,
     // def _wait_for_pending(self, result,
+}
+
+// type ResultConsumerOutput<B> = Result<BackendAsyncResult<B>, BackendError>;
+// type ResultConsumerOutputFuture<B> = Box<dyn Future<Output = ResultConsumerOutput<B>>>;
+
+pub struct ResultConsumer<BE: Backend> {
+    pubsub: String,
+    backend: Arc<BE>,
+    error_handler: Box<dyn Fn(BackendError) + Send + Sync + 'static>,
+    pending_messages: Arc<AtomicU16>,
+    pending_results: Arc<AtomicU16>,
+    // polled_pop: Option<std::pin::Pin<ResultConsumerOutputFuture<B>>>,
+    // waker_tx: Sender<Waker>,
+}
+
+impl<BE: Backend> ResultConsumer<BE> {
 }
 
 /// Metadata of a task stored in a [`Backend`].
@@ -193,6 +229,9 @@ pub(crate) async fn build_and_connect_backend<Bb: BackendBuilder>(
 
 pub struct DisabledBackendBuilder;
 
+impl DisabledBackendBuilder {
+
+}
 #[async_trait]
 impl BackendBuilder for DisabledBackendBuilder {
     type Backend = DisabledBackend;
@@ -213,7 +252,7 @@ pub struct DisabledBackend;
 
 impl DisabledBackend {
     pub fn new() -> Self {
-        Self::default()
+        DisabledBackend
     }
 }
 

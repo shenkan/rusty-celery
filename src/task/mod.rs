@@ -13,6 +13,7 @@ mod options;
 mod request;
 mod signature;
 
+pub use async_result::BackendAsyncResult;
 pub use async_result::AsyncResult;
 pub use options::TaskOptions;
 pub use request::Request;

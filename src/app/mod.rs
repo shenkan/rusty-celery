@@ -209,6 +209,31 @@ where
         self
     }
 
+    /// Set a timeout in seconds before giving up establishing a connection to a broker.
+    pub fn backend_connection_timeout(mut self, timeout: u32) -> Self {
+        self.config.backend_connection_timeout = timeout;
+        self
+    }
+
+    /// Set whether or not to automatically try to re-establish connection to the AMQP broker.
+    pub fn backend_connection_retry(mut self, retry: bool) -> Self {
+        self.config.backend_connection_retry = retry;
+        self
+    }
+
+    /// Set the maximum number of retries before we give up trying to re-establish connection
+    /// to the AMQP broker.
+    pub fn backend_connection_max_retries(mut self, max_retries: u32) -> Self {
+        self.config.backend_connection_max_retries = max_retries;
+        self
+    }
+
+    /// Set the number of seconds to wait before re-trying the connection with the broker.
+    pub fn backend_connection_retry_delay(mut self, retry_delay: u32) -> Self {
+        self.config.backend_connection_retry_delay = retry_delay;
+        self
+    }
+
     /// Construct a [`Celery`] app with the current configuration.
     pub async fn build(self) -> Result<Celery<Bb::Broker, BEb::Backend>, CeleryError> {
         // Declare default queue to broker.

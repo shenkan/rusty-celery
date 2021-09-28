@@ -1,10 +1,12 @@
 #![allow(dead_code)]
-use super::{Backend, BackendBuilder, KeyValueStoreBackend, TaskResultMetadata};
+use super::{AsyncBackend, Backend, BackendBuilder, KeyValueStoreBackend, ResultConsumer, TaskResultMetadata};
 use crate::error::{BackendError, ProtocolError};
 use crate::protocol::Delivery;
+use crate::task::BackendAsyncResult;
 use crate::protocol::Message;
 use crate::protocol::TryDeserializeMessage;
 use crate::task::TaskStatus;
+use std::task::{Poll, Waker};
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use futures::Stream;
@@ -20,7 +22,6 @@ use std::fmt;
 use std::future::Future;
 use std::sync::atomic::{AtomicU16, Ordering};
 use std::sync::Arc;
-use std::task::{Poll, Waker};
 use tokio::sync::mpsc::{channel, Receiver, Sender};
 use tokio::sync::Mutex;
 use uuid::Uuid;
@@ -60,18 +61,23 @@ impl BackendBuilder for RedisBackendBuilder {
         println!("Creating client");
         let client = Client::open(&self.config.backend_url[..])
             .map_err(|_| BackendError::InvalidBackendUrl(self.config.backend_url.clone()))?;
-
+        
+        
         let manager = client.get_tokio_connection_manager().await?;
-
+        
         let (tx, rx) = channel(1);
 
         Ok(RedisBackend {
             uri: self.config.backend_url.clone(),
             client: client,
             manager: manager,
+            queues: HashSet::new(),
+            cache: Arc::new(Mutex::new(LruCache::new(MAX_CACHE_RESULTS))),
+            result_consumer: None,
+            pending_messages: Arc::new(AtomicU16::new(0)),
+            pending_results: Arc::new(AtomicU16::new(0)),
             waker_rx: Mutex::new(rx),
             waker_tx: tx,
-            cache: Arc::new(Mutex::new(LruCache::new(MAX_CACHE_RESULTS))),
         })
     }
 }
@@ -80,9 +86,46 @@ pub struct RedisBackend {
     uri: String,
     client: Client,
     manager: ConnectionManager,
+    queues: HashSet<String>,
+    cache: Arc<Mutex<LruCache<String, TaskResultMetadata>>>,
+    result_consumer: Option<ResultConsumer<Self>>,
+    pending_messages: Arc<AtomicU16>,
+    pending_results: Arc<AtomicU16>,
     waker_rx: Mutex<Receiver<Waker>>,
     waker_tx: Sender<Waker>,
-    cache: Arc<Mutex<LruCache<String, TaskResultMetadata>>>,
+}
+
+#[async_trait]
+impl AsyncBackend for RedisBackend {
+    type Backend = Self;
+
+    async fn collect_into(&self, result: BackendAsyncResult<Self::Backend>, bucket: String) {
+        todo!()
+    }
+
+    async fn iter_native(&self, result: BackendAsyncResult<Self::Backend>, no_ack: bool) {
+        todo!()
+    }
+
+    async fn add_pending_result(&self, result: BackendAsyncResult<Self::Backend>) {
+        todo!()
+    }
+
+    async fn _maybe_resolve_from_buffer(&self, result: BackendAsyncResult<Self::Backend>) {
+        todo!()
+    }
+
+    async fn remove_pending_result(&self, result: BackendAsyncResult<Self::Backend>) {
+        todo!()
+    }
+
+    async fn on_result_fulfilled(&self, result: BackendAsyncResult<Self::Backend>) {
+        todo!()
+    }
+
+    async fn wait_for_pending(&self, result: BackendAsyncResult<Self::Backend>) {
+        todo!()
+    }
 }
 
 #[async_trait]
@@ -107,6 +150,7 @@ impl KeyValueStoreBackend for RedisBackend {
             .query_async(&mut self.manager.clone())
             .await?;
         Ok(cmd)
+        
     }
 
     async fn set(&self, key: &str, value: TaskResultMetadata) -> Result<(), BackendError> {
