@@ -126,7 +126,7 @@ pub trait AsyncBackend: Backend where Self: Backend + Send + Sync + Sized {
 pub struct ResultConsumer<BE: Backend> {
     pubsub: String,
     backend: Arc<BE>,
-    error_handler: Box<dyn Fn(BackendError) + Send + Sync + 'static>,
+    // error_handler: Box<dyn Fn(BackendError) + Send + Sync + 'static>,
     pending_messages: Arc<AtomicU16>,
     pending_results: Arc<AtomicU16>,
     // polled_pop: Option<std::pin::Pin<ResultConsumerOutputFuture<B>>>,
@@ -134,6 +134,14 @@ pub struct ResultConsumer<BE: Backend> {
 }
 
 impl<BE: Backend> ResultConsumer<BE> {
+    pub fn new(backend: BE) -> Self {
+        Self {
+            pubsub: String::from(""),
+            backend: Arc::new(backend),
+            pending_messages: Arc::new(AtomicU16::new(0)),
+            pending_results: Arc::new(AtomicU16::new(0)),
+        }
+    }
 }
 
 /// Metadata of a task stored in a [`Backend`].
