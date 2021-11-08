@@ -130,7 +130,7 @@ impl AsyncBackend for RedisBackend {
 #[async_trait]
 impl KeyValueStoreBackend for RedisBackend {
     const TASK_KEYPREFIX: &'static str = "celery-task-meta-";
-
+    
     async fn get(&self, key: &str) -> Result<String, BackendError> {
         // let mut conn = self.client.clone().get_async_connection().await?;
         // Ok(conn.get(key)?)

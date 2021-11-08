@@ -1,16 +1,17 @@
 use crate::error::BackendError;
-use crate::task::{AsyncResult, BackendAsyncResult, TaskStatus};
+use crate::task::{AsyncResult, BackendAsyncResult, Task, TaskStatus};
+use ::redis::{from_redis_value, ConnectionLike, FromRedisValue};
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
-use std::task::{Poll, Waker};
-use log::error;
-use std::sync::atomic::{AtomicU16, Ordering};
-use tokio::sync::mpsc::{channel, Receiver, Sender};
-use std::future::Future;
 use futures::Stream;
-use std::sync::Arc;
+use log::error;
 use serde::{Deserialize, Serialize};
 use serde_json::{from_slice, from_value, json, Value};
+use std::future::Future;
+use std::sync::atomic::{AtomicU16, Ordering};
+use std::sync::Arc;
+use std::task::{Poll, Waker};
+use tokio::sync::mpsc::{channel, Receiver, Sender};
 use tokio::time::{self, Duration};
 
 mod redis;
@@ -68,11 +69,14 @@ pub trait Backend: Send + Sync + Sized {
     }
 }
 
-
 // Trait for a key/value store result [`Backend`].
 #[async_trait]
 pub trait KeyValueStoreBackend: Backend {
     const TASK_KEYPREFIX: &'static str;
+
+    // type Client;
+
+    // fn client(&self) -> Self::Client;
 
     async fn get(&self, key: &str) -> Result<String, BackendError>;
 
@@ -92,11 +96,13 @@ pub trait KeyValueStoreBackend: Backend {
 }
 
 #[async_trait]
-pub trait AsyncBackend: Backend where Self: Backend + Send + Sync + Sized {
-
+pub trait AsyncBackend: Backend
+where
+    Self: Backend + Send + Sync + Sized,
+{
     async fn collect_into(&self, result: BackendAsyncResult<Self>, bucket: String);
     // def _collect_into(self, result, bucket):
-    
+
     async fn iter_native(&self, result: BackendAsyncResult<Self>, no_ack: bool);
     // def iter_native(self, result, no_ack=True, **kwargs):
 
@@ -190,6 +196,14 @@ impl TaskResultMetadata {
     }
 }
 
+impl FromRedisValue for TaskResultMetadata {
+    fn from_redis_value(v: &::redis::Value) -> ::redis::RedisResult<Self> {
+        let v: Vec<u8> = from_redis_value(v)?;
+        Ok(serde_json::from_slice(v.as_slice())
+            .map_err(|_e| ::redis::RedisError::from((::redis::ErrorKind::TypeError, "")))?)
+    }
+}
+
 /// A [`BackendBuilder`] is used to create a type of results [`Backend`] with a custom configuration.
 #[async_trait]
 pub trait BackendBuilder {
@@ -237,9 +251,7 @@ pub(crate) async fn build_and_connect_backend<Bb: BackendBuilder>(
 
 pub struct DisabledBackendBuilder;
 
-impl DisabledBackendBuilder {
-
-}
+impl DisabledBackendBuilder {}
 #[async_trait]
 impl BackendBuilder for DisabledBackendBuilder {
     type Backend = DisabledBackend;
@@ -272,11 +284,10 @@ impl Backend for DisabledBackend {
         Err(BackendError::NotConnected)
     }
 
-    
     async fn mark_as_started(&self, task_id: &str, meta: TaskResultMetadata) -> Result<(), BackendError> {
         Err(BackendError::NotConnected)
     }
-    
+
     async fn mark_as_done(&self, task_id: &str, meta: TaskResultMetadata) -> Result<(), BackendError> {
         Err(BackendError::NotConnected)
     }
@@ -292,7 +303,7 @@ impl Backend for DisabledBackend {
     async fn is_cached(&self, task_id: &str) -> bool {
         false
     }
-    
+
     fn safe_url(&self) -> String {
         "".into()
     }
